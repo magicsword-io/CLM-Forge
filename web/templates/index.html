@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLM Forge - Script Enforcement Readiness</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-content">
+      <h1>CLM Forge</h1>
+      <span class="tagline">From script chaos to enforced trust.</span>
+    </div>
+    <div class="header-actions">
+      {% if ps_available %}
+      <span class="engine-badge engine-active" title="PowerShell found — static analysis + dynamic CLM testing active">&#9889; pwsh active</span>
+      {% else %}
+      <span class="engine-badge engine-inactive" title="PowerShell not found — static analysis only (install pwsh for dynamic CLM testing)">&#9888; static only</span>
+      {% endif %}
+      <a href="/docs" target="_blank" rel="noopener" class="api-link" title="Interactive Swagger API reference">API</a>
+      <label class="upload-btn" for="file-input">Upload .ps1 (multi)</label>
+      <input type="file" id="file-input" accept=".ps1,.psm1,.psd1" multiple hidden>
+      <button id="analyze-btn" class="primary-btn" disabled>Analyze</button>
+      <button id="clear-btn" class="secondary-btn">Clear</button>
+    </div>
+  </header>
+
+  <!-- Back-to-batch chip (only visible when focused on one script from a batch) -->
+  <div class="focus-back-bar" id="focus-back-bar" hidden>
+    <button class="focus-back-btn" id="focus-back-btn">&larr; Back to batch</button>
+    <span class="focus-current">Viewing <strong id="focus-current-name"></strong> (<span id="focus-current-pos"></span>)</span>
+    <div class="focus-pager">
+      <button id="focus-prev" title="Previous script">&larr; Prev</button>
+      <button id="focus-next" title="Next script">Next &rarr;</button>
+    </div>
+  </div>
+
+  <!-- SINGLE-FILE MODE -->
+  <div class="main" id="single-mode">
+    <div class="editor-panel">
+      <div class="panel-header">
+        <span id="filename-display">Paste or upload one or more PowerShell scripts</span>
+        <span id="line-count" class="meta"></span>
+      </div>
+      <div class="editor-wrapper">
+        <div class="line-numbers" id="line-numbers"></div>
+        <textarea id="code-editor" placeholder="# Paste your PowerShell script here...&#10;# Or upload .ps1 files using the button above (multiple supported).&#10;&#10;Add-Type -TypeDefinition @'&#10;using System;&#10;public class Example {&#10;    public static int Test() { return 42; }&#10;}&#10;'@&#10;&#10;$client = New-Object -ComObject WScript.Shell&#10;[System.IO.File]::ReadAllText('C:\test.txt')" spellcheck="false"></textarea>
+      </div>
+    </div>
+
+    <div class="results-panel">
+      <div class="panel-header">
+        <span>Findings</span>
+        <div class="filter-chips" id="filter-chips"></div>
+      </div>
+      <div id="summary-bar" class="summary-bar" style="display:none"></div>
+      <div class="workflow-bar" id="workflow-bar">
+        <span class="workflow-title">WDAC rollout:</span>
+        <span class="workflow-step">1. Upload</span>
+        <span class="workflow-arrow">&rarr;</span>
+        <span class="workflow-step">2. Analyze</span>
+        <span class="workflow-arrow">&rarr;</span>
+        <span class="workflow-step">3. Fix or allow</span>
+        <span class="workflow-arrow">&rarr;</span>
+        <span class="workflow-step">4. Re-test</span>
+      </div>
+      <div id="export-bar" class="export-bar" style="display:none">
+        <button id="export-html" class="export-btn" title="Download self-contained HTML report">HTML</button>
+        <button id="export-json" class="export-btn" title="Download JSON report">JSON</button>
+      </div>
+      <div id="findings-list" class="findings-list">
+        <div class="empty-state">
+          <div class="empty-icon">&#9876;</div>
+          <p>Upload or paste a PowerShell script and click <strong>Analyze</strong> to preview WDAC Script Enforcement impact.</p>
+          <p class="meta">Find what CLM blocks, apply fixes, or choose signer/hash allow paths with intent. Upload <strong>multiple files</strong> for a batch audit.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATCH MODE (hidden until multiple files are loaded) -->
+  <div class="batch-mode" id="batch-mode" hidden>
+    <div class="batch-toolbar">
+      <div class="batch-file-strip" id="batch-file-strip"></div>
+      <div class="batch-actions">
+        <label class="upload-btn" for="file-input-2">+ Add files</label>
+        <input type="file" id="file-input-2" accept=".ps1,.psm1,.psd1" multiple hidden>
+        <button id="batch-back-btn" class="secondary-btn" title="Back to single-file mode">Single-file</button>
+      </div>
+    </div>
+
+    <div id="batch-summary" class="batch-summary"></div>
+
+    <div id="batch-export-bar" class="export-bar" style="display:none">
+      <span class="export-label">Export audit:</span>
+      <button id="batch-export-html" class="export-btn" title="Consolidated HTML report">HTML</button>
+      <button id="batch-export-json" class="export-btn" title="Full JSON (scripts + aggregate)">JSON</button>
+      <button id="batch-export-csv" class="export-btn" title="Flat CSV of all findings">CSV</button>
+      <button id="batch-export-sarif" class="export-btn" title="SARIF 2.1.0 for GitHub code scanning / SIEM">SARIF</button>
+      <span class="spacer"></span>
+      <label class="filter-label">Fail on:
+        <select id="fail-on-select" class="mini-select">
+          <option value="">off</option>
+          <option value="Critical">Critical</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </label>
+    </div>
+
+    <div id="batch-findings-list" class="batch-findings-list"></div>
+  </div>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

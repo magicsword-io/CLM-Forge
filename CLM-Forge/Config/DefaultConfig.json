@@ -1,0 +1,134 @@
+{
+    "version": "1.0.0",
+    "scriptHostTests": {
+        "fileTypes": [
+            { "extension": ".ps1",    "host": "powershell.exe", "args": "-ExecutionPolicy Bypass -File", "content": "Write-Output 'CLM-Forge-Test'", "description": "PowerShell script" },
+            { "extension": ".bat",    "host": "cmd.exe",        "args": "/c",                            "content": "@echo off\necho CLM-Forge-Test", "description": "Batch file" },
+            { "extension": ".cmd",    "host": "cmd.exe",        "args": "/c",                            "content": "@echo off\necho CLM-Forge-Test", "description": "Command file" },
+            { "extension": ".vbs",    "host": "cscript.exe",    "args": "//nologo",                      "content": "WScript.Echo \"CLM-Forge-Test\"", "description": "VBScript" },
+            { "extension": ".js",     "host": "cscript.exe",    "args": "//nologo",                      "content": "WScript.Echo('CLM-Forge-Test');", "description": "JScript" },
+            { "extension": ".jse",    "host": "cscript.exe",    "args": "//nologo",                      "content": "WScript.Echo('CLM-Forge-Test');", "description": "Encoded JScript" },
+            { "extension": ".wsf",    "host": "cscript.exe",    "args": "//nologo",                      "content": "<job><script language=\"JScript\">WScript.Echo('CLM-Forge-Test');</script></job>", "description": "Windows Script File" },
+            { "extension": ".wsc",    "host": "cscript.exe",    "args": "//nologo",                      "content": "<?xml version=\"1.0\"?><component><public><method name=\"Test\"/></public><script language=\"JScript\"><![CDATA[function Test(){return 'CLM-Forge-Test';}]]></script></component>", "description": "Windows Script Component" },
+            { "extension": ".hta",    "host": "mshta.exe",      "args": "",                              "content": "<html><head><script language=\"JScript\">var fso=new ActiveXObject('Scripting.FileSystemObject');close();</script></head></html>", "description": "HTML Application" },
+            { "extension": ".ps1xml","host": "powershell.exe", "args": "-ExecutionPolicy Bypass -Command", "content": "", "description": "PowerShell format/type XML" },
+            { "extension": ".psc1",   "host": "powershell.exe", "args": "-PSConsoleFile",                "content": "<?xml version=\"1.0\" encoding=\"utf-8\"?><PSConsoleFile ConsoleSchemaVersion=\"1.0\"><PSVersion>5.1</PSVersion></PSConsoleFile>", "description": "PowerShell console file" },
+            { "extension": ".mof",    "host": "mofcomp.exe",    "args": "",                              "content": "#pragma autorecover\n[dynamic] class CLMCheckTest {};", "description": "MOF (WMI schema)" }
+        ],
+        "testPaths": [
+            { "path": "$env:TEMP",                                    "description": "User temp directory",         "requiresAdmin": false },
+            { "path": "$env:USERPROFILE\\Desktop",                   "description": "User desktop",                "requiresAdmin": false },
+            { "path": "$env:USERPROFILE\\Documents",                 "description": "User documents",              "requiresAdmin": false },
+            { "path": "$env:USERPROFILE\\Downloads",                 "description": "User downloads",              "requiresAdmin": false },
+            { "path": "$env:APPDATA",                                 "description": "Roaming AppData",             "requiresAdmin": false },
+            { "path": "$env:LOCALAPPDATA",                            "description": "Local AppData",               "requiresAdmin": false },
+            { "path": "$env:LOCALAPPDATA\\Temp",                     "description": "Local AppData Temp",          "requiresAdmin": false },
+            { "path": "$env:ProgramData",                             "description": "ProgramData root",            "requiresAdmin": false },
+            { "path": "$env:PUBLIC",                                  "description": "Public folder",               "requiresAdmin": false },
+            { "path": "C:\\Users\\Public\\Documents",                "description": "Public Documents",            "requiresAdmin": false },
+            { "path": "$env:SystemRoot\\Temp",                       "description": "System temp",                 "requiresAdmin": true  },
+            { "path": "$env:SystemRoot\\Tasks",                      "description": "Windows Tasks",               "requiresAdmin": true  }
+        ],
+        "executionMethods": [
+            { "method": "direct",          "description": "Direct invocation via script host" },
+            { "method": "cmd_c",           "description": "cmd /c <host> <script>" },
+            { "method": "powershell_file", "description": "powershell -File <script>" },
+            { "method": "powershell_cmd",  "description": "powershell -Command <content>" }
+        ]
+    },
+    "comObjects": [
+        { "progId": "WScript.Shell",                "risk": "High",     "description": "Command execution via shell" },
+        { "progId": "WScript.Network",              "risk": "Medium",   "description": "Network information and drive mapping" },
+        { "progId": "Scripting.FileSystemObject",   "risk": "High",     "description": "File system access" },
+        { "progId": "Scripting.Dictionary",         "risk": "Low",      "description": "Dictionary/hashtable object" },
+        { "progId": "Shell.Application",            "risk": "High",     "description": "Explorer and shell operations" },
+        { "progId": "ADODB.Connection",             "risk": "High",     "description": "Database connectivity" },
+        { "progId": "ADODB.Recordset",              "risk": "Medium",   "description": "Database query results" },
+        { "progId": "MSXML2.XMLHTTP",               "risk": "High",     "description": "HTTP requests" },
+        { "progId": "MSXML2.DOMDocument",            "risk": "Medium",   "description": "XML document parsing" },
+        { "progId": "InternetExplorer.Application",  "risk": "High",     "description": "Internet Explorer automation" },
+        { "progId": "MMC20.Application",             "risk": "Critical", "description": "MMC snap-in (lateral movement vector)" },
+        { "progId": "ShellBrowserWindow",            "risk": "Critical", "description": "Shell browser window (lateral movement)" },
+        { "progId": "Schedule.Service",              "risk": "High",     "description": "Task Scheduler access" },
+        { "progId": "WbemScripting.SWbemLocator",    "risk": "High",     "description": "WMI access via scripting" },
+        { "progId": "HTMLFile",                      "risk": "Medium",   "description": "HTML document object" },
+        { "progId": "Outlook.Application",           "risk": "High",     "description": "Outlook automation" },
+        { "progId": "Excel.Application",             "risk": "Medium",   "description": "Excel automation" },
+        { "progId": "Word.Application",              "risk": "Medium",   "description": "Word automation" }
+    ],
+    "dotNetTypes": [
+        { "type": "System.IO.File",                                         "risk": "High",     "category": "FileSystem" },
+        { "type": "System.IO.StreamReader",                                  "risk": "Medium",   "category": "FileSystem" },
+        { "type": "System.IO.StreamWriter",                                  "risk": "Medium",   "category": "FileSystem" },
+        { "type": "System.IO.Path",                                          "risk": "Low",      "category": "FileSystem" },
+        { "type": "System.Net.WebClient",                                    "risk": "Critical", "category": "Network" },
+        { "type": "System.Net.Http.HttpClient",                              "risk": "Critical", "category": "Network" },
+        { "type": "System.Net.Sockets.TcpClient",                           "risk": "Critical", "category": "Network" },
+        { "type": "System.Net.Sockets.UdpClient",                           "risk": "High",     "category": "Network" },
+        { "type": "System.Net.Dns",                                          "risk": "Medium",   "category": "Network" },
+        { "type": "System.Net.NetworkInformation.Ping",                      "risk": "Medium",   "category": "Network" },
+        { "type": "System.Reflection.Assembly",                              "risk": "Critical", "category": "Reflection" },
+        { "type": "System.Reflection.MethodInfo",                            "risk": "Critical", "category": "Reflection" },
+        { "type": "System.Runtime.InteropServices.Marshal",                  "risk": "Critical", "category": "Interop" },
+        { "type": "System.Diagnostics.Process",                              "risk": "High",     "category": "Execution" },
+        { "type": "System.Diagnostics.ProcessStartInfo",                     "risk": "High",     "category": "Execution" },
+        { "type": "System.Security.Cryptography.AesCryptoServiceProvider",   "risk": "High",     "category": "Crypto" },
+        { "type": "System.Security.Cryptography.RSACryptoServiceProvider",   "risk": "High",     "category": "Crypto" },
+        { "type": "System.Security.Cryptography.SHA256Managed",             "risk": "Medium",   "category": "Crypto" },
+        { "type": "Microsoft.Win32.Registry",                                "risk": "High",     "category": "Registry" },
+        { "type": "Microsoft.Win32.RegistryKey",                             "risk": "High",     "category": "Registry" },
+        { "type": "System.DirectoryServices.DirectoryEntry",                 "risk": "High",     "category": "ActiveDirectory" },
+        { "type": "System.DirectoryServices.DirectorySearcher",              "risk": "High",     "category": "ActiveDirectory" },
+        { "type": "System.Management.ManagementObject",                      "risk": "Medium",   "category": "WMI" },
+        { "type": "System.Management.ManagementObjectSearcher",              "risk": "Medium",   "category": "WMI" },
+        { "type": "System.Threading.Thread",                                 "risk": "Medium",   "category": "Threading" },
+        { "type": "System.Convert",                                          "risk": "Medium",   "category": "Encoding" },
+        { "type": "System.Text.Encoding",                                    "risk": "Low",      "category": "Encoding" },
+        { "type": "System.Environment",                                      "risk": "Low",      "category": "Environment" },
+        { "type": "System.Windows.Forms.MessageBox",                         "risk": "Low",      "category": "UI" },
+        { "type": "System.Data.SqlClient.SqlConnection",                     "risk": "High",     "category": "Database" }
+    ],
+    "typeAccelerators": [
+        "[math]", "[regex]", "[xml]", "[wmi]", "[wmiclass]", "[wmisearcher]",
+        "[adsi]", "[adsisearcher]", "[psobject]", "[pscustomobject]",
+        "[scriptblock]", "[type]", "[ipaddress]", "[mailaddress]",
+        "[semver]", "[version]", "[guid]", "[uri]", "[timespan]"
+    ],
+    "eventLogQueries": {
+        "codeIntegrity": {
+            "logName": "Microsoft-Windows-CodeIntegrity/Operational",
+            "eventIds": [3076, 3077, 3089, 3099],
+            "descriptions": {
+                "3076": "Audit mode block (would have been blocked in enforce)",
+                "3077": "Enforce mode block (file was actually blocked)",
+                "3089": "Signing information for a file",
+                "3099": "Policy refresh event"
+            }
+        },
+        "appLocker": {
+            "logName": "Microsoft-Windows-AppLocker/MSI and Script",
+            "eventIds": [8003, 8004, 8005, 8006, 8007, 8020, 8023, 8024, 8025],
+            "descriptions": {
+                "8003": "Exe/DLL was allowed to run",
+                "8004": "Exe/DLL was blocked from running",
+                "8005": "Script/MSI was allowed to run",
+                "8006": "Script/MSI would have been blocked (audit)",
+                "8007": "Script/MSI was blocked from running",
+                "8020": "Packaged app allowed",
+                "8023": "Packaged app was blocked",
+                "8024": "Packaged app audit block",
+                "8025": "Packaged app installation blocked"
+            }
+        },
+        "powerShell": {
+            "logName": "Microsoft-Windows-PowerShell/Operational",
+            "eventIds": [4103, 4104, 4105, 4106],
+            "descriptions": {
+                "4103": "Module logging event",
+                "4104": "Script block logging event",
+                "4105": "Script block invocation start",
+                "4106": "Script block invocation end"
+            }
+        }
+    }
+}

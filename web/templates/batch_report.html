@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLM Forge Batch Report</title>
+<style>
+:root{
+  --ms-green:#10B981;--ms-dark-green:#059669;--ms-orange:#D97706;--ms-yellow:#EAB308;
+  --ms-red:#EF4444;--ms-purple:#A78BFA;--ms-blue:#3B82F6;--ms-teal:#14B8A6;
+  --bg:#08080A;--surface:#111113;--surface-bright:#141416;--elevated:#18181B;
+  --border:rgba(255,255,255,0.04);--border-hover:rgba(255,255,255,0.08);
+  --text:rgba(255,255,255,0.87);--text-muted:rgba(255,255,255,0.50);--text-dim:rgba(255,255,255,0.28);
+  --font-display:'Geist','Inter Tight',system-ui,sans-serif;
+  --font-body:'Inter Tight',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-mono:'Geist Mono','Cascadia Code','Fira Code',Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.6;font-size:13px;font-weight:500}
+.container{max-width:1280px;margin:0 auto;padding:32px 24px}
+
+.report-header{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;margin-bottom:24px;position:relative;overflow:hidden}
+.report-header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--ms-green),var(--ms-teal),var(--ms-blue),var(--ms-purple))}
+.header-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px}
+.header-left h1{font-family:var(--font-display);color:var(--ms-green);font-size:28px;font-weight:700;letter-spacing:-0.5px;line-height:1.2}
+.header-left .tagline{color:var(--text-dim);font-size:13px;font-style:italic;margin-top:4px}
+.header-right{text-align:right}
+.meta-row{display:flex;gap:24px;flex-wrap:wrap;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.meta-pill{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
+.meta-pill strong{color:var(--text);font-weight:600}
+
+/* Portfolio score ring */
+.score-ring{width:110px;height:110px;position:relative}
+.score-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.score-ring .bg{fill:none;stroke:rgba(255,255,255,0.04);stroke-width:7}
+.score-ring .fg{fill:none;stroke-width:7;stroke-linecap:round}
+.score-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.score-label .num{font-family:var(--font-display);font-size:30px;font-weight:700;line-height:1}
+.score-label .sub{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
+
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 16px;text-align:center}
+.summary-card .num{font-family:var(--font-display);font-size:32px;font-weight:700;line-height:1.2;letter-spacing:-0.5px}
+.summary-card .label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;font-weight:600}
+.c-total{color:var(--text)}.c-pass{color:var(--ms-green)}.c-critical{color:var(--ms-red)}
+.c-high{color:var(--ms-orange)}.c-medium{color:var(--ms-yellow)}.c-low{color:var(--ms-blue)}
+
+.section{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:20px;overflow:hidden}
+.section-header{padding:16px 24px;background:var(--surface-bright);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.section-header h2{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.2px}
+.section-count{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 10px;font-size:11px;color:var(--text-dim);font-family:var(--font-mono)}
+
+/* Portfolio table */
+table{width:100%;border-collapse:collapse}
+th{background:var(--bg);padding:10px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-dim);border-bottom:1px solid var(--border);font-weight:600}
+td{padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface-bright)}
+.badge{display:inline-block;padding:2px 10px;border-radius:6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;font-family:var(--font-mono)}
+.badge.critical{background:rgba(239,68,68,0.08);color:var(--ms-red)}
+.badge.high{background:rgba(217,119,6,0.08);color:var(--ms-orange)}
+.badge.medium{background:rgba(234,179,8,0.08);color:var(--ms-yellow)}
+.badge.low{background:rgba(59,130,246,0.08);color:var(--ms-blue)}
+.badge.clean{background:rgba(16,185,129,0.08);color:var(--ms-green)}
+.score-chip{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 10px;border-radius:6px;letter-spacing:0.3px;background:var(--bg);border:1px solid var(--border);color:var(--text-muted)}
+.score-chip.c-pass{background:rgba(16,185,129,0.08);color:var(--ms-green);border-color:rgba(16,185,129,0.25)}
+.score-chip.c-high{background:rgba(217,119,6,0.08);color:var(--ms-orange);border-color:rgba(217,119,6,0.25)}
+.score-chip.c-critical{background:rgba(239,68,68,0.08);color:var(--ms-red);border-color:rgba(239,68,68,0.25)}
+.script-name-cell{font-family:var(--font-mono);color:var(--text);font-weight:600}
+.jump-link{color:var(--ms-teal);text-decoration:none;font-size:11px;font-family:var(--font-mono)}
+.jump-link:hover{text-decoration:underline}
+
+/* Per-script sections */
+.script-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden;scroll-margin-top:16px}
+.script-section-header{padding:14px 20px;background:var(--surface-bright);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.script-section-title{font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--text)}
+.script-section-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sev-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);font-weight:600}
+.sev-dot{width:8px;height:8px;border-radius:50%}
+.sev-dot.critical{background:var(--ms-red)}.sev-dot.high{background:var(--ms-orange)}
+.sev-dot.medium{background:var(--ms-yellow)}.sev-dot.low{background:var(--ms-blue)}
+
+.code-snippet{font-family:var(--font-mono);font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-top:6px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;color:var(--ms-orange);max-width:520px}
+.remediation{color:var(--ms-green);font-size:12px;margin-top:6px;padding:6px 12px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.12);border-radius:6px;line-height:1.5}
+.remediation::before{content:'FIX: ';font-weight:700;font-family:var(--font-mono);font-size:10px}
+.rule-id{font-family:var(--font-mono);font-size:12px;color:var(--ms-teal);font-weight:600}
+
+.clm-pass-box{padding:16px 20px;color:var(--ms-green);font-size:13px;background:rgba(16,185,129,0.04);border-top:1px solid rgba(16,185,129,0.15)}
+.wdac-row{padding:12px 20px;display:flex;gap:16px;align-items:center;border-top:1px solid var(--border);background:var(--bg)}
+.wdac-row-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;font-weight:600;flex-shrink:0}
+.wdac-row-value{font-family:var(--font-mono);font-size:12px;color:var(--ms-green);word-break:break-all}
+
+.ci-badge{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:700;font-family:var(--font-mono);letter-spacing:0.3px}
+.ci-pass{background:rgba(16,185,129,0.10);color:var(--ms-green);border:1px solid rgba(16,185,129,0.30)}
+.ci-fail{background:rgba(239,68,68,0.10);color:var(--ms-red);border:1px solid rgba(239,68,68,0.30)}
+
+.report-footer{text-align:center;padding:24px;color:var(--text-dim);font-size:12px;border-top:1px solid var(--border);margin-top:32px}
+.report-footer a{color:var(--ms-green);text-decoration:none}
+
+@media print{
+  body{background:#fff;color:#000;font-size:11px}
+  .container{max-width:100%;padding:16px}
+  .report-header,.section,.summary-card,.script-section{border-color:#ddd;background:#fff}
+  .section-header,.script-section-header{background:#f8f8f8}
+  .num,.script-name-cell{color:#000!important}
+  tr:hover td{background:transparent}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="report-header">
+  <div class="header-top">
+    <div class="header-left">
+      <h1>CLM Forge Batch Audit</h1>
+      <div class="tagline">From script chaos to enforced trust.</div>
+    </div>
+    <div class="header-right">
+      <div class="score-ring" id="score-ring"></div>
+    </div>
+  </div>
+  <div class="meta-row" id="meta-row"></div>
+</div>
+
+<div class="summary-grid" id="summary-grid"></div>
+
+<div class="section">
+  <div class="section-header">
+    <h2>Script Portfolio</h2>
+    <span class="section-count" id="portfolio-count"></span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Script</th>
+        <th style="width:60px">Lines</th>
+        <th style="width:70px">Score</th>
+        <th style="width:70px">Critical</th>
+        <th style="width:70px">High</th>
+        <th style="width:70px">Medium</th>
+        <th style="width:70px">Low</th>
+        <th style="width:90px">CLM Blocked</th>
+        <th style="width:80px"></th>
+      </tr>
+    </thead>
+    <tbody id="portfolio-body"></tbody>
+  </table>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <h2>Top Rule Violations</h2>
+    <span class="section-count" id="top-rules-count"></span>
+  </div>
+  <table>
+    <thead><tr><th style="width:100px">Rule</th><th style="width:80px">Severity</th><th>Name</th><th style="width:80px">Count</th><th style="width:200px">Scripts Affected</th></tr></thead>
+    <tbody id="top-rules-body"></tbody>
+  </table>
+</div>
+
+<h2 style="font-family:var(--font-display);font-size:18px;margin:32px 0 12px;letter-spacing:-0.3px">Per-Script Details</h2>
+<div id="script-sections"></div>
+
+<div class="report-footer">
+  Generated by <strong>CLM Forge</strong> &mdash; <span id="footer-date"></span>
+</div>
+</div>
+
+<script>
+const data = {{REPORT_JSON}};
+const e = s => { if(s==null)return''; const d=document.createElement('div'); d.textContent=String(s); return d.innerHTML; };
+const slug = s => String(s).replace(/[^a-zA-Z0-9_-]/g,'_');
+
+const agg = data.aggregate || {};
+const scripts = data.scripts || [];
+const SEV_ORDER = {Critical:0,High:1,Medium:2,Low:3};
+
+// Meta row
+const dtStr = new Date(data.generated_at || new Date()).toLocaleString('en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+const ciBadge = agg.fail_on
+  ? `<span class="ci-badge ${agg.ci_pass ? 'ci-pass' : 'ci-fail'}">${agg.ci_pass ? '&#10003; CI PASS' : '&#10007; CI FAIL'} — fail-on ${e(agg.fail_on)}</span>`
+  : '';
+document.getElementById('meta-row').innerHTML = `
+  <div class="meta-pill"><strong>Scripts:</strong> ${agg.total_scripts||0}</div>
+  <div class="meta-pill"><strong>Total Findings:</strong> ${agg.total_findings||0}</div>
+  <div class="meta-pill"><strong>Clean:</strong> ${agg.scripts_clean||0} / ${agg.total_scripts||0}</div>
+  <div class="meta-pill"><strong>Generated:</strong> ${dtStr}</div>
+  ${ciBadge ? `<div class="meta-pill">${ciBadge}</div>` : ''}
+`;
+document.getElementById('footer-date').textContent = dtStr;
+
+// Score ring (portfolio avg)
+const avg = agg.average_score || 100;
+const scoreColor = avg >= 80 ? '#10B981' : avg >= 50 ? '#D97706' : '#EF4444';
+const circ = 2 * Math.PI * 46;
+const offset = circ - (avg/100)*circ;
+document.getElementById('score-ring').innerHTML = `
+  <svg viewBox="0 0 110 110"><circle class="bg" cx="55" cy="55" r="46"/><circle class="fg" cx="55" cy="55" r="46" stroke="${scoreColor}" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/></svg>
+  <div class="score-label"><div class="num" style="color:${scoreColor}">${avg}</div><div class="sub">Avg Score</div></div>`;
+
+// Summary cards
+const sc = agg.severity_counts || {};
+const cards = [
+  {label:'Scripts',num:agg.total_scripts||0,cls:'c-total'},
+  {label:'Findings',num:agg.total_findings||0,cls:'c-total'},
+  {label:'Critical',num:sc.Critical||0,cls:'c-critical'},
+  {label:'High',num:sc.High||0,cls:'c-high'},
+  {label:'Medium',num:sc.Medium||0,cls:'c-medium'},
+  {label:'Low',num:sc.Low||0,cls:'c-low'},
+  {label:'Clean',num:`${agg.scripts_clean||0}/${agg.total_scripts||0}`,cls:agg.scripts_clean===agg.total_scripts?'c-pass':'c-total'},
+];
+if ((agg.clm_blocked_total||0) > 0) cards.push({label:'CLM Blocked', num:agg.clm_blocked_total, cls:'c-critical'});
+const grid = document.getElementById('summary-grid');
+cards.forEach(c => {
+  const d = document.createElement('div'); d.className='summary-card';
+  d.innerHTML = `<div class="num ${c.cls}">${c.num}</div><div class="label">${c.label}</div>`;
+  grid.appendChild(d);
+});
+
+// Sort scripts by risk (criticals first)
+const sortedScripts = [...scripts].sort((a, b) => {
+  const scoreA = (a.summary?.Critical||0)*1000 + (a.summary?.High||0)*100 + (a.summary?.Medium||0)*10 + (a.summary?.Low||0);
+  const scoreB = (b.summary?.Critical||0)*1000 + (b.summary?.High||0)*100 + (b.summary?.Medium||0)*10 + (b.summary?.Low||0);
+  return scoreB - scoreA;
+});
+
+// Portfolio table
+document.getElementById('portfolio-count').textContent = `${scripts.length} script${scripts.length!==1?'s':''}`;
+const pbody = document.getElementById('portfolio-body');
+sortedScripts.forEach(s => {
+  const sum = s.summary || {};
+  const score = s.score ?? 100;
+  const scoreCls = score >= 80 ? 'c-pass' : score >= 50 ? 'c-high' : 'c-critical';
+  const clm = (s.clm_dynamic_results || {}).blockedByCLM || 0;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="script-name-cell">${e(s.filename)}</td>
+    <td style="font-family:var(--font-mono);color:var(--text-dim)">${s.total_lines||0}</td>
+    <td><span class="score-chip ${scoreCls}">${score}</span></td>
+    <td>${sum.Critical ? `<span class="badge critical">${sum.Critical}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
+    <td>${sum.High ? `<span class="badge high">${sum.High}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
+    <td>${sum.Medium ? `<span class="badge medium">${sum.Medium}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
+    <td>${sum.Low ? `<span class="badge low">${sum.Low}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
+    <td>${clm ? `<span class="badge critical">${clm}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
+    <td><a class="jump-link" href="#s-${slug(s.filename)}">view &rarr;</a></td>`;
+  pbody.appendChild(tr);
+});
+
+// Top rule violations
+const ruleMap = {};
+scripts.forEach(s => {
+  (s.findings || []).forEach(f => {
+    if (f.suppressed) return;
+    const r = ruleMap[f.rule_id] ||= {name: f.rule_name, severity: f.severity, count: 0, scripts: new Set()};
+    r.count++;
+    r.scripts.add(s.filename);
+  });
+});
+const topRules = Object.entries(ruleMap).map(([id, r]) => ({id, ...r})).sort((a,b) => b.count - a.count).slice(0, 15);
+document.getElementById('top-rules-count').textContent = `${Object.keys(ruleMap).length} unique rule${Object.keys(ruleMap).length!==1?'s':''}`;
+const trbody = document.getElementById('top-rules-body');
+if (topRules.length === 0) {
+  trbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--ms-green);padding:20px">&#10003; No rules violated across the portfolio.</td></tr>`;
+} else {
+  topRules.forEach(r => {
+    const tr = document.createElement('tr');
+    const scriptList = [...r.scripts].slice(0, 3).join(', ') + (r.scripts.size > 3 ? ` +${r.scripts.size - 3} more` : '');
+    tr.innerHTML = `
+      <td><span class="rule-id">${e(r.id)}</span></td>
+      <td><span class="badge ${r.severity.toLowerCase()}">${e(r.severity)}</span></td>
+      <td>${e(r.name)}</td>
+      <td style="font-family:var(--font-mono);font-weight:700">${r.count}</td>
+      <td style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">${e(scriptList)}</td>`;
+    trbody.appendChild(tr);
+  });
+}
+
+// Per-script sections
+const sectionHost = document.getElementById('script-sections');
+sortedScripts.forEach(s => {
+  const sum = s.summary || {};
+  const score = s.score ?? 100;
+  const scoreCls = score >= 80 ? 'c-pass' : score >= 50 ? 'c-high' : 'c-critical';
+  const findings = (s.findings || []).slice().sort((a,b) => (SEV_ORDER[a.severity]??4) - (SEV_ORDER[b.severity]??4) || a.line - b.line);
+
+  const sevChips = ['Critical','High','Medium','Low']
+    .filter(sev => sum[sev])
+    .map(sev => `<span class="sev-chip"><span class="sev-dot ${sev.toLowerCase()}"></span>${sum[sev]} ${sev}</span>`).join('');
+
+  let findingsHtml = '';
+  if (findings.length === 0) {
+    findingsHtml = `<div class="clm-pass-box">&#10003; No CLM compatibility issues detected.</div>`;
+  } else {
+    findingsHtml = `<table><thead><tr><th style="width:80px">Severity</th><th style="width:90px">Rule</th><th style="width:50px">Line</th><th>Description</th><th style="width:320px">Details</th></tr></thead><tbody>`;
+    findings.forEach(f => {
+      let details = '';
+      if(f.code_snippet) details += `<div class="code-snippet">${e(f.code_snippet)}</div>`;
+      if(f.remediation) details += `<div class="remediation">${e(f.remediation)}</div>`;
+      findingsHtml += `<tr>
+        <td><span class="badge ${f.severity.toLowerCase()}">${e(f.severity)}</span></td>
+        <td><span class="rule-id">${e(f.rule_id)}</span><br><span style="font-size:11px;color:var(--text-muted)">${e(f.rule_name)}</span></td>
+        <td style="font-family:var(--font-mono);color:var(--text-dim)">${f.line}</td>
+        <td>${e(f.description)}</td>
+        <td>${details}</td></tr>`;
+    });
+    findingsHtml += '</tbody></table>';
+  }
+
+  const clm = s.clm_dynamic_results || {};
+  let clmHtml = '';
+  if ((s.analysis_method || '').includes('constrained_runspace')) {
+    if ((clm.errors || []).length === 0) {
+      clmHtml = `<div class="clm-pass-box">&#10003; Dynamic CLM test passed — script ran cleanly in a ConstrainedLanguage runspace.</div>`;
+    } else {
+      clmHtml = `<div class="clm-pass-box" style="color:var(--ms-orange);background:rgba(217,119,6,0.06);border-color:rgba(217,119,6,0.15)">&#9888; Dynamic CLM test: ${clm.blockedByCLM||0} blocked, ${clm.otherErrors||0} other errors.</div>`;
+    }
+  }
+
+  const wdacHtml = (s.wdac_hash && s.wdac_hash.sha256) ? `
+    <div class="wdac-row">
+      <span class="wdac-row-label">WDAC SHA256</span>
+      <span class="wdac-row-value">${e(s.wdac_hash.sha256)}</span>
+    </div>` : '';
+
+  const section = document.createElement('div');
+  section.className = 'script-section';
+  section.id = 's-' + slug(s.filename);
+  section.innerHTML = `
+    <div class="script-section-header">
+      <div class="script-section-title">${e(s.filename)}</div>
+      <div class="script-section-meta">
+        ${sevChips || '<span class="badge clean">&#10003; clean</span>'}
+        <span class="score-chip ${scoreCls}">score ${score}</span>
+      </div>
+    </div>
+    ${findingsHtml}
+    ${clmHtml}
+    ${wdacHtml}`;
+  sectionHost.appendChild(section);
+});
+</script>
+</body>
+</html>
