@@ -1,0 +1,159 @@
+---
+name: Build and Publish Container
+
+'on':
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: magicsword-io/clm-forge
+
+jobs:
+  web-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install web dependencies
+        run: python -m pip install -r web/requirements.txt
+
+      - name: Run local production checks
+        run: >
+          bash scripts/verify-production.sh
+          --skip-docker
+          --skip-powershell
+
+  powershell-compat:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Windows PowerShell 5.1 compatibility smoke
+        shell: powershell
+        run: .\tests\run-compatibility.ps1
+
+      - name: PowerShell 7 compatibility smoke
+        shell: pwsh
+        run: ./tests/run-compatibility.ps1
+
+  container-smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and start compose service
+        run: docker compose -f web/docker-compose.yml up -d --build
+
+      - name: Wait for container health endpoint
+        run: |
+          for attempt in {1..30}; do
+            echo "Health check attempt ${attempt}/30"
+            if health="$(curl -fsS http://127.0.0.1:8080/api/health)"; then
+              echo "$health"
+              echo "$health" | python -c '
+          import json
+          import sys
+          ok = json.load(sys.stdin).get("powershell_available") is True
+          raise SystemExit(0 if ok else 1)
+          '
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f web/docker-compose.yml ps
+          docker compose -f web/docker-compose.yml logs
+          exit 1
+
+      - name: Verify container PowerShell bridge
+        run: |
+          python - <<'PY'
+          import json
+          import urllib.request
+
+          payload = {
+              "filename": "unsafe.ps1",
+              "content": "Add-Type -TypeDefinition 'public class A{}'",
+          }
+          req = urllib.request.Request(
+              "http://127.0.0.1:8080/api/analyze-text",
+              data=json.dumps(payload).encode("utf-8"),
+              headers={"Content-Type": "application/json"},
+          )
+          with urllib.request.urlopen(req, timeout=30) as resp:
+              result = json.loads(resp.read())
+          print(json.dumps(result, indent=2))
+          method = result.get("analysis_method", "")
+          if "powershell_ast" not in method:
+              raise SystemExit(
+                  "container analysis did not include powershell_ast"
+              )
+          if "constrained_runspace" not in method:
+              raise SystemExit(
+                  "container analysis did not include constrained_runspace"
+              )
+          PY
+
+      - name: Stop compose service
+        if: always()
+        run: docker compose -f web/docker-compose.yml down --remove-orphans
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs:
+      - web-smoke
+      - powershell-compat
+      - container-smoke
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./web/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
