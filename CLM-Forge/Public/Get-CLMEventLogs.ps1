@@ -124,7 +124,7 @@ function Get-CLMEventLogs {
         'Microsoft-Windows-AppLocker/Packaged app-Deployment',
         'Microsoft-Windows-AppLocker/Packaged app-Execution'
     )
-    $alEventIds = @(8003, 8004, 8005, 8006, 8007, 8020, 8023, 8024, 8025)
+    $alEventIds = @(8003, 8004, 8005, 8006, 8007, 8020, 8023, 8024, 8025, 8028, 8029, 8036, 8037, 8038)
     if ($EventIDs) { $alEventIds = $alEventIds | Where-Object { $EventIDs -contains $_ } }
 
     foreach ($alLog in $alLogNames) {
@@ -151,10 +151,15 @@ function Get-CLMEventLogs {
                     '8023' { 'Packaged app blocked' }
                     '8024' { 'Packaged app audit block' }
                     '8025' { 'Packaged app installation blocked' }
+                    '8028' { 'App Control script/MSI audit block via WLDP (would be blocked)' }
+                    '8029' { 'App Control script/MSI block via WLDP' }
+                    '8036' { 'App Control COM object blocked' }
+                    '8037' { 'App Control script/MSI allowed via WLDP' }
+                    '8038' { 'App Control script/MSI signing information' }
                     default { "AppLocker event $($group.Name)" }
                 }
-                $severity = if ($group.Name -match '^(8004|8007|8023|8025)$') { 'High' } elseif ($group.Name -match '^(8006|8024)$') { 'Medium' } else { 'Info' }
-                $status = if ($group.Name -match '^(8004|8007|8023|8025)$') { 'Fail' } elseif ($group.Name -match '^(8006|8024)$') { 'Warning' } else { 'Pass' }
+                $severity = if ($group.Name -match '^(8004|8007|8023|8025|8029|8036)$') { 'High' } elseif ($group.Name -match '^(8006|8024|8028)$') { 'Medium' } else { 'Info' }
+                $status = if ($group.Name -match '^(8004|8007|8023|8025|8029|8036)$') { 'Fail' } elseif ($group.Name -match '^(8006|8024|8028)$') { 'Warning' } else { 'Pass' }
 
                 $sampleMessages = $group.Group | Select-Object -First 3 | ForEach-Object {
                     @{ timeCreated = $_.TimeCreated.ToString('o'); message = $_.Message.Substring(0, [Math]::Min(300, $_.Message.Length)) }
@@ -164,7 +169,12 @@ function Get-CLMEventLogs {
                     -Status $status -Severity $severity `
                     -Message "$eventDesc - $($group.Count) event(s)" `
                     -Details @{ eventId = [int]$group.Name; count = $group.Count; logName = $alLog; samples = $sampleMessages } `
-                    -Remediation $(if ($status -eq 'Fail') { 'Review blocked items and create AppLocker allow rules as needed.' } else { '' })))
+                    -Remediation $(switch ($group.Name) {
+                        '8028' { 'Review App Control audit events before enforcing. PowerShell may run the file in Constrained Language Mode instead of hard blocking it.' }
+                        '8029' { 'Review App Control script enforcement blocks. For PowerShell, confirm whether the script was blocked outright or forced into Constrained Language Mode.' }
+                        '8036' { 'Review COM object policy. App Control COM enforcement is separate from script enforcement and may require explicit COM allow rules.' }
+                        default { if ($status -eq 'Fail') { 'Review blocked items and create AppLocker or App Control allow rules as needed.' } else { '' } }
+                    })))
             }
         }
         catch {
